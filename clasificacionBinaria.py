@@ -1,119 +1,167 @@
-# ==============================
-# EJERCICIO CLASIFICACIÓN BINARIA - DIABETES
-# ==============================
+# ==========================================================
+# SISTEMA DE CLASIFICACIÓN BINARIA - PREDICCIÓN DE DIABETES
+# Incluye:
+# - Regresión Logística
+# - Interfaz gráfica en español
+# - Probabilidad
+# - Diagnóstico final
+# - Gráfica dinámica del paciente
+# ==========================================================
 
-# Importamos librerías necesarias
+# =============================
+# IMPORTAR LIBRERÍAS
+# =============================
 import pandas as pd
 import numpy as np
 import tkinter as tk
 from tkinter import messagebox
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-# ==============================
-# 1️⃣ CARGAR DATASET
-# ==============================
-
-# Cargar la base de datos
+# =============================
+# CARGAR DATASET
+# =============================
 data = pd.read_csv("diabetes.csv")
 
-# Seleccionamos solo las columnas que usaremos
-X = data[["BMI", "Age", "PlasmaGlucose"]]  # Variables predictoras
-y = data["Diabetic"]  # Variable objetivo (0 o 1)
+# Variables predictoras
+X = data[["BMI", "Age", "PlasmaGlucose"]]
 
-# ==============================
-# 2️⃣ PREPROCESAMIENTO
-# ==============================
+# Variable objetivo (0 = No Diabético, 1 = Diabético)
+y = data["Diabetic"]
 
-# Dividir en entrenamiento y prueba
+# =============================
+# PREPROCESAMIENTO
+# =============================
+
+# Dividir datos
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# Escalamos los datos (MUY importante en regresión logística)
+# Escalar datos
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# ==============================
-# 3️⃣ ENTRENAMIENTO DEL MODELO
-# ==============================
+# =============================
+# ENTRENAR MODELO
+# =============================
+modelo = LogisticRegression()
+modelo.fit(X_train, y_train)
 
-# Creamos el modelo de Regresión Logística
-model = LogisticRegression()
+# =============================
+# FUNCIÓN SIGMOIDE
+# =============================
+def sigmoide(z):
+    return 1 / (1 + np.exp(-z))
 
-# Entrenamos el modelo
-model.fit(X_train, y_train)
-
-# ==============================
-# 4️⃣ INTERFAZ GRÁFICA
-# ==============================
-
-# Función que se ejecuta cuando el usuario presiona el botón
+# =============================
+# FUNCIÓN DE PREDICCIÓN
+# =============================
 def predecir():
     try:
-        # Obtener valores ingresados por el usuario
-        bmi = float(entry_bmi.get())
-        age = float(entry_age.get())
-        glucose = float(entry_glucose.get())
+        # Obtener valores del usuario
+        imc = float(entrada_imc.get())
+        edad = float(entrada_edad.get())
+        glucosa = float(entrada_glucosa.get())
 
-        # Crear arreglo con los datos
-        paciente = np.array([[bmi, age, glucose]])
+        # Crear arreglo del paciente
+        paciente = np.array([[imc, edad, glucosa]])
 
-        # Escalar los datos igual que el entrenamiento
-        paciente = scaler.transform(paciente)
+        # Escalar igual que entrenamiento
+        paciente_escalado = scaler.transform(paciente)
 
-        # Obtener probabilidad
-        probabilidad = model.predict_proba(paciente)[0][1]
+        # Obtener probabilidad de clase 1 (Diabetes)
+        probabilidad = modelo.predict_proba(paciente_escalado)[0][1]
 
-        # Obtener clasificación final (0 o 1)
-        prediccion = model.predict(paciente)[0]
+        # Obtener clasificación final
+        prediccion = modelo.predict(paciente_escalado)[0]
 
-        # Mostrar resultados
+        # Interpretar resultado
+        diagnostico = "Diabético" if prediccion == 1 else "No Diabético"
+
+        # Mostrar resultado en interfaz
         resultado_label.config(
-            text=f"Probabilidad de Diabetes: {probabilidad:.2f}\nClasificación Final: {prediccion}"
+            text=f"Probabilidad de Diabetes: {probabilidad:.2f}\n"
+                 f"Diagnóstico Final: {diagnostico}"
         )
+
+        # =============================
+        # PARTE GRÁFICA
+        # =============================
+
+        # Obtener valor lineal (z) antes de sigmoide
+        z_paciente = modelo.decision_function(paciente_escalado)[0]
+
+        # Generar curva sigmoide
+        z = np.linspace(-10, 10, 400)
+        p = sigmoide(z)
+
+        # Crear gráfica
+        plt.figure()
+        plt.plot(z, p)
+        plt.scatter(z_paciente, probabilidad)
+
+        # Línea del umbral 0.5
+        plt.axhline(y=0.5)
+
+        plt.title("Curva Sigmoide - Clasificación del Paciente")
+        plt.xlabel("Valor lineal (z)")
+        plt.ylabel("Probabilidad")
+        plt.show()
 
     except ValueError:
         messagebox.showerror("Error", "Por favor ingresa valores numéricos válidos")
 
-
-# Crear ventana principal
+# =============================
+# CREAR INTERFAZ GRÁFICA
+# =============================
 ventana = tk.Tk()
-ventana.title("Predicción de Diabetes")
-ventana.geometry("400x350")
+ventana.title("Sistema de Predicción de Diabetes")
+ventana.geometry("420x400")
+ventana.resizable(False, False)
 
 # Título
-titulo = tk.Label(ventana, text="Clasificación Binaria - Diabetes", font=("Arial", 14))
-titulo.pack(pady=10)
+titulo = tk.Label(
+    ventana,
+    text="Sistema de Clasificación Binaria\nPredicción de Diabetes",
+    font=("Arial", 14)
+)
+titulo.pack(pady=15)
 
-# ==============================
+# =============================
 # CAMPOS DE ENTRADA
-# ==============================
+# =============================
 
-# BMI
-tk.Label(ventana, text="BMI:").pack()
-entry_bmi = tk.Entry(ventana)
-entry_bmi.pack()
+tk.Label(ventana, text="IMC (BMI):").pack()
+entrada_imc = tk.Entry(ventana)
+entrada_imc.pack()
 
-# Age
-tk.Label(ventana, text="Age:").pack()
-entry_age = tk.Entry(ventana)
-entry_age.pack()
+tk.Label(ventana, text="Edad:").pack()
+entrada_edad = tk.Entry(ventana)
+entrada_edad.pack()
 
-# Plasma Glucose
-tk.Label(ventana, text="Plasma Glucose:").pack()
-entry_glucose = tk.Entry(ventana)
-entry_glucose.pack()
+tk.Label(ventana, text="Glucosa en Plasma:").pack()
+entrada_glucosa = tk.Entry(ventana)
+entrada_glucosa.pack()
 
-# Botón de predicción
-boton = tk.Button(ventana, text="Predecir", command=predecir)
-boton.pack(pady=15)
+# Botón
+boton = tk.Button(
+    ventana,
+    text="Calcular Diagnóstico",
+    command=predecir
+)
+boton.pack(pady=20)
 
-# Label para mostrar resultado
-resultado_label = tk.Label(ventana, text="", font=("Arial", 12))
+# Resultado
+resultado_label = tk.Label(
+    ventana,
+    text="",
+    font=("Arial", 12)
+)
 resultado_label.pack()
 
-# Ejecutar la interfaz
+# Ejecutar ventana
 ventana.mainloop()
